@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <attr name="bootSplashBackground" format="color" />
+    <attr name="bootSplashLogo" format="reference" />
+    <attr name="bootSplashBrand" format="reference" />
+    <!-- Optional: an app-provided animated image (e.g. @raw/my_splash) played
+         full-screen over bootSplashBackground instead of the static logo, and its
+         single-playthrough duration in ms (used to wait for it to finish). -->
+    <attr name="bootSplashAnimation" format="reference" />
+    <attr name="bootSplashAnimationDuration" format="integer" />
+    <attr name="darkContentBarsStyle" format="boolean" />
+    <attr name="postBootSplashTheme" format="reference" />
+</resources>
