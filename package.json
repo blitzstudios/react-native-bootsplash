@@ -1,0 +1,111 @@
+{
+  "name": "react-native-bootsplash",
+  "version": "1.1.5",
+  "license": "MIT",
+  "description": "Display a bootsplash on your app starts. Hide it when you want.",
+  "author": "Mathieu Acthernoene <zoontek@gmail.com>",
+  "homepage": "https://github.com/zoontek/react-native-bootsplash",
+  "main": "dist/commonjs/index.js",
+  "module": "dist/module/index.js",
+  "types": "dist/typescript/index.d.ts",
+  "files": [
+    "dist",
+    "android",
+    "ios",
+    "src",
+    "!android/build",
+    "!android/.cxx",
+    "!android/.gradle",
+    "!ios/build",
+    "!src/addon",
+    "RNBootSplash.podspec",
+    "app.plugin.js",
+    "cli.js",
+    "react-native.config.js"
+  ],
+  "bin": "./cli.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zoontek/react-native-bootsplash.git"
+  },
+  "keywords": [
+    "react-native-bootsplash",
+    "react-native",
+    "boot-splash",
+    "bootsplash",
+    "boot-screen",
+    "bootscreen",
+    "splash-screen",
+    "splashscreen",
+    "launch-screen",
+    "launchscreen"
+  ],
+  "scripts": {
+    "clean": "rm -rf dist",
+    "format": "prettier '**/*' -u -w",
+    "lint": "eslint --ext ts,tsx ./src",
+    "typecheck": "tsc --noEmit",
+    "build": "yarn clean && bob build && rm -rf dist/*/package.json"
+  },
+  "react-native-builder-bob": {
+    "source": "src",
+    "output": "dist",
+    "targets": [
+      "commonjs",
+      "module",
+      "typescript"
+    ]
+  },
+  "prettier": {
+    "plugins": [
+      "prettier-plugin-organize-imports"
+    ]
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*"
+  },
+  "dependencies": {
+    "@expo/config-plugins": "^9.0.0 || ^10.0.0",
+    "@react-native-community/cli-config-android": "^18.0.0",
+    "@react-native-community/cli-config-apple": "^18.0.0",
+    "@react-native-community/cli-tools": "^18.0.0",
+    "commander": "^13.1.0",
+    "detect-indent": "^6.1.0",
+    "fs-extra": "^11.3.0",
+    "node-html-parser": "^7.0.1",
+    "picocolors": "^1.1.1",
+    "prettier": "^3.5.3",
+    "react-native-is-edge-to-edge": "^1.2.1",
+    "sharp": "^0.32.6",
+    "ts-dedent": "^2.2.0",
+    "xml-formatter": "^3.6.5"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2",
+    "@babel/preset-env": "^7.25.3",
+    "@react-native-community/cli-types": "^18.0.0",
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^20.17.30",
+    "@types/react": "^19.0.0",
+    "@types/semver": "^7.7.0",
+    "@typescript-eslint/eslint-plugin": "^8.29.1",
+    "@typescript-eslint/parser": "^8.29.1",
+    "eslint": "^8.57.1",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "prettier-plugin-organize-imports": "^4.1.0",
+    "react": "19.0.0",
+    "react-native": "0.79.2",
+    "react-native-builder-bob": "^0.40.11",
+    "semver": "^7.7.1",
+    "typescript": "^5.8.3"
+  },
+  "codegenConfig": {
+    "name": "RNBootSplashSpec",
+    "type": "modules",
+    "jsSrcsDir": "./src",
+    "android": {
+      "javaPackageName": "com.zoontek.rnbootsplash"
+    }
+  }
+}
