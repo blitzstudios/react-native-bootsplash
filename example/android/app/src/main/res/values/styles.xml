@@ -1,0 +1,17 @@
+<resources>
+    <style name="AppTheme" parent="Theme.EdgeToEdge">
+        <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="enforceNavigationBarContrast">false</item>
+    </style>
+
+    <style name="BootTheme" parent="Theme.BootSplash.EdgeToEdge">
+        <!-- enforce status bar style as the example app doesn't support dark mode -->
+        <item name="darkContentBarsStyle">true</item>
+
+        <item name="bootSplashBackground">@color/bootsplash_background</item>
+        <item name="bootSplashLogo">@drawable/bootsplash_logo</item>
+        <!-- <item name="bootSplashBrand">@drawable/bootsplash_brand</item> -->
+        <item name="postBootSplashTheme">@style/AppTheme</item>
+    </style>
+</resources>
