@@ -53,7 +53,7 @@ yarn-error.log
 /example/vendor/bundle/
 
 # Bob
-dist/
+# dist/ - committed for git-based package distribution
 
 # CLI paid addon
 src/addon

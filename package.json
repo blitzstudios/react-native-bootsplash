@@ -1,6 +1,6 @@
 {
   "name": "react-native-bootsplash",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "license": "MIT",
   "description": "Display a bootsplash on your app starts. Hide it when you want.",
   "author": "Mathieu Acthernoene <zoontek@gmail.com>",
@@ -45,8 +45,7 @@
     "format": "prettier '**/*' -u -w",
     "lint": "eslint --ext ts,tsx ./src",
     "typecheck": "tsc --noEmit",
-    "build": "yarn clean && bob build && rm -rf dist/*/package.json",
-    "prepack": "prettier '**/*' -u -c && yarn lint && yarn typecheck && yarn build"
+    "build": "yarn clean && bob build && rm -rf dist/*/package.json"
   },
   "react-native-builder-bob": {
     "source": "src",
