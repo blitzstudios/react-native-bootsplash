@@ -17,6 +17,7 @@ static UIView *_loadingView = nil;
 static NSMutableArray<RCTPromiseResolveBlock> *_resolveQueue = [[NSMutableArray alloc] init];
 static bool _fade = false;
 static bool _nativeHidden = false;
+static NSString *_storyboardName = nil;
 
 @implementation RNBootSplash
 
@@ -76,6 +77,8 @@ RCT_EXPORT_MODULE();
   if (RCTRunningInAppExtension()) {
     return;
   }
+
+  _storyboardName = storyboardName;
 
   [NSTimer scheduledTimerWithTimeInterval:0.35
                                   repeats:NO
@@ -159,6 +162,39 @@ RCT_EXPORT_MODULE();
   }
 }
 
+- (void)showImpl:(BOOL)fade
+         resolve:(RCTPromiseResolveBlock)resolve {
+  if (RCTRunningInAppExtension() || _rootView == nil || _storyboardName == nil) {
+    return resolve(@(false));
+  }
+
+  // If already visible, just resolve
+  if ([RNBootSplash isLoadingViewVisible]) {
+    return resolve(@(true));
+  }
+
+  dispatch_async(dispatch_get_main_queue(), ^{
+    UIStoryboard *storyboard = [UIStoryboard storyboardWithName:_storyboardName bundle:nil];
+    
+    _loadingView = [[storyboard instantiateInitialViewController] view];
+    _loadingView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    _loadingView.frame = _rootView.bounds;
+    _loadingView.center = (CGPoint){CGRectGetMidX(_rootView.bounds), CGRectGetMidY(_rootView.bounds)};
+    _loadingView.hidden = NO;
+    
+#if RCT_NEW_ARCH_ENABLED
+    [_rootView setLoadingView:_loadingView];
+#else
+    [_rootView addSubview:_loadingView];
+#endif
+    
+    // Wait for next frame to ensure the view is actually rendered on screen
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.05 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+      resolve(@(true));
+    });
+  });
+}
+
 - (void)isVisibleImpl:(RCTPromiseResolveBlock)resolve {
   resolve(@([RNBootSplash isLoadingViewVisible]));
 }
@@ -181,6 +217,12 @@ RCT_EXPORT_MODULE();
   [self hideImpl:fade resolve:resolve];
 }
 
+- (void)show:(BOOL)fade
+     resolve:(RCTPromiseResolveBlock)resolve
+      reject:(RCTPromiseRejectBlock)reject {
+  [self showImpl:fade resolve:resolve];
+}
+
 - (void)isVisible:(RCTPromiseResolveBlock)resolve
            reject:(RCTPromiseRejectBlock)reject {
   [self isVisibleImpl:resolve];
@@ -194,6 +236,12 @@ RCT_EXPORT_METHOD(hide:(BOOL)fade
                   resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject) {
   [self hideImpl:fade resolve:resolve];
+}
+
+RCT_EXPORT_METHOD(show:(BOOL)fade
+                  resolve:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject) {
+  [self showImpl:fade resolve:resolve];
 }
 
 RCT_EXPORT_METHOD(isVisible:(RCTPromiseResolveBlock)resolve

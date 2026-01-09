@@ -37,6 +37,11 @@ class RNBootSplashModule(reactContext: ReactApplicationContext) :
   }
 
   @ReactMethod
+  fun show(fade: Boolean, promise: Promise) {
+    RNBootSplashModuleImpl.show(reactApplicationContext, fade, promise)
+  }
+
+  @ReactMethod
   fun isVisible(promise: Promise) {
     RNBootSplashModuleImpl.isVisible(promise)
   }

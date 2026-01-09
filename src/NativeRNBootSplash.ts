@@ -9,6 +9,7 @@ export interface Spec extends TurboModule {
     statusBarHeight?: number;
   };
   hide(fade: boolean): Promise<void>;
+  show(fade: boolean): Promise<void>;
   isVisible(): Promise<boolean>;
 }
 

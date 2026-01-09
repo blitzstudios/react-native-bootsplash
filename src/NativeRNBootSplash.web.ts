@@ -44,4 +44,9 @@ export default {
     const container = document.getElementById("bootsplash");
     return Promise.resolve(container != null);
   },
+
+  show: (_fade) => {
+    // No-op on web - once the bootsplash is hidden, it cannot be shown again
+    return Promise.resolve();
+  },
 } satisfies Spec;

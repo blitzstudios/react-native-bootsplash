@@ -236,6 +236,32 @@ object RNBootSplashModuleImpl {
     hideAndClearPromiseQueue(reactContext, fade)
   }
 
+  fun show(reactContext: ReactApplicationContext, fade: Boolean, promise: Promise) {
+    if (mThemeResId == -1) {
+      return promise.resolve(false) // Not initialized
+    }
+
+    UiThreadUtil.runOnUiThread {
+      val activity = reactContext.currentActivity
+
+      if (activity == null || activity.isFinishing || activity.isDestroyed) {
+        promise.resolve(false)
+        return@runOnUiThread
+      }
+
+      if (mStatus == Status.VISIBLE || mStatus == Status.INITIALIZING) {
+        promise.resolve(true) // Already visible
+        return@runOnUiThread
+      }
+
+      mInitialDialog = RNBootSplashDialog(activity, mThemeResId, false)
+      mInitialDialog?.show {
+        mStatus = Status.VISIBLE
+        promise.resolve(true)
+      }
+    }
+  }
+
   fun isVisible(promise: Promise) {
     promise.resolve(mStatus != Status.HIDDEN)
   }

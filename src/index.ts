@@ -81,6 +81,11 @@ export function hide(config: Config = {}): Promise<void> {
   return NativeModule.hide(fade).then(() => {});
 }
 
+export function show(config: Config = {}): Promise<void> {
+  const { fade = false } = config;
+  return NativeModule.show(fade).then(() => {});
+}
+
 export function isVisible(): Promise<boolean> {
   return NativeModule.isVisible();
 }
@@ -278,6 +283,7 @@ export function useHideAnimation(config: UseHideAnimationConfig) {
 
 export default {
   hide,
+  show,
   isVisible,
   useHideAnimation,
 };
