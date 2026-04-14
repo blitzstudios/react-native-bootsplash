@@ -79,7 +79,7 @@ export function useHideAnimation(config) {
   });
   return useMemo(() => {
     const containerStyle = {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor,
       alignItems: "center",
       justifyContent: "center"

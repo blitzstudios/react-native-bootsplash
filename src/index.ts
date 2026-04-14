@@ -181,7 +181,7 @@ export function useHideAnimation(config: UseHideAnimationConfig) {
 
   return useMemo<UseHideAnimation>(() => {
     const containerStyle: ViewStyle = {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor,
       alignItems: "center",
       justifyContent: "center",

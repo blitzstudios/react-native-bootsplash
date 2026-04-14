@@ -88,7 +88,7 @@ function useHideAnimation(config) {
   });
   return (0, _react.useMemo)(() => {
     const containerStyle = {
-      ..._reactNative.StyleSheet.absoluteFillObject,
+      ..._reactNative.StyleSheet.absoluteFill,
       backgroundColor,
       alignItems: "center",
       justifyContent: "center"
