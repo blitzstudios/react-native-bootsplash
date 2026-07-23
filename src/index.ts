@@ -18,6 +18,9 @@ const EDGE_TO_EDGE = isEdgeToEdge();
 
 export type Config = {
   fade?: boolean;
+  // When true, dismiss immediately instead of waiting for the native splash
+  // animation to finish playing. Defaults to false (wait for the animation).
+  forced?: boolean;
 };
 
 export type Manifest = {
@@ -77,8 +80,8 @@ export type UseHideAnimation = {
 };
 
 export function hide(config: Config = {}): Promise<void> {
-  const { fade = false } = config;
-  return NativeModule.hide(fade).then(() => {});
+  const { fade = false, forced = false } = config;
+  return NativeModule.hide(fade, forced).then(() => {});
 }
 
 export function show(config: Config = {}): Promise<void> {

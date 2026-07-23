@@ -7,9 +7,10 @@ import NativeModule from "./NativeRNBootSplash";
 const EDGE_TO_EDGE = isEdgeToEdge();
 export function hide(config = {}) {
   const {
-    fade = false
+    fade = false,
+    forced = false
   } = config;
-  return NativeModule.hide(fade).then(() => {});
+  return NativeModule.hide(fade, forced).then(() => {});
 }
 export function show(config = {}) {
   const {

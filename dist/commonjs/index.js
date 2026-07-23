@@ -16,9 +16,10 @@ function _interopRequireDefault(e) { return e && e.__esModule ? e : { default: e
 const EDGE_TO_EDGE = (0, _reactNativeIsEdgeToEdge.isEdgeToEdge)();
 function hide(config = {}) {
   const {
-    fade = false
+    fade = false,
+    forced = false
   } = config;
-  return _NativeRNBootSplash.default.hide(fade).then(() => {});
+  return _NativeRNBootSplash.default.hide(fade, forced).then(() => {});
 }
 function show(config = {}) {
   const {

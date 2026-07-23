@@ -32,8 +32,8 @@ class RNBootSplashModule(reactContext: ReactApplicationContext) :
   }
 
   @ReactMethod
-  fun hide(fade: Boolean, promise: Promise) {
-    RNBootSplashModuleImpl.hide(reactApplicationContext, fade, promise)
+  fun hide(fade: Boolean, forced: Boolean, promise: Promise) {
+    RNBootSplashModuleImpl.hide(reactApplicationContext, fade, forced, promise)
   }
 
   @ReactMethod

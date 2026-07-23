@@ -8,7 +8,7 @@ export interface Spec extends TurboModule {
     navigationBarHeight?: number;
     statusBarHeight?: number;
   };
-  hide(fade: boolean): Promise<void>;
+  hide(fade: boolean, forced: boolean): Promise<void>;
   show(fade: boolean): Promise<void>;
   isVisible(): Promise<boolean>;
 }

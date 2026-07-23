@@ -1,6 +1,7 @@
 import { type ImageRequireSource, type ImageResizeMode, type ImageSourcePropType, type ImageStyle, type ViewStyle } from "react-native";
 export type Config = {
     fade?: boolean;
+    forced?: boolean;
 };
 export type Manifest = {
     background: string;

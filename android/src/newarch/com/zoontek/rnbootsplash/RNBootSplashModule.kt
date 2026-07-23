@@ -29,8 +29,8 @@ class RNBootSplashModule(reactContext: ReactApplicationContext) :
     return RNBootSplashModuleImpl.getConstants(reactApplicationContext)
   }
 
-  override fun hide(fade: Boolean, promise: Promise) {
-    RNBootSplashModuleImpl.hide(reactApplicationContext, fade, promise)
+  override fun hide(fade: Boolean, forced: Boolean, promise: Promise) {
+    RNBootSplashModuleImpl.hide(reactApplicationContext, fade, forced, promise)
   }
 
   override fun show(fade: Boolean, promise: Promise) {

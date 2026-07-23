@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.res.Configuration
 import android.os.Build
+import android.os.SystemClock
 import android.util.TypedValue
 import android.view.View
 import android.view.ViewConfiguration
@@ -116,7 +117,11 @@ object RNBootSplashModuleImpl {
     }
   }
 
-  private fun hideAndClearPromiseQueue(reactContext: ReactApplicationContext, fade: Boolean) {
+  private fun hideAndClearPromiseQueue(
+    reactContext: ReactApplicationContext,
+    fade: Boolean,
+    forced: Boolean
+  ) {
     UiThreadUtil.runOnUiThread {
       val activity = reactContext.currentActivity
 
@@ -130,7 +135,7 @@ object RNBootSplashModuleImpl {
         timer.schedule(object : TimerTask() {
           override fun run() {
             timer.cancel()
-            hideAndClearPromiseQueue(reactContext, fade)
+            hideAndClearPromiseQueue(reactContext, fade, forced)
           }
         }, 100)
 
@@ -144,6 +149,25 @@ object RNBootSplashModuleImpl {
       if (mStatus == Status.HIDDEN) {
         clearPromiseQueue()
         return@runOnUiThread // both initial and fade out dialog are hidden
+      }
+
+      // Native-owned timing: unless forced, keep the splash visible until its
+      // WebP animation has finished playing, then dismiss.
+      if (!forced) {
+        val remaining = mInitialDialog?.remainingAnimationTimeMs() ?: 0L
+
+        if (remaining > 0) {
+          val timer = Timer()
+
+          timer.schedule(object : TimerTask() {
+            override fun run() {
+              timer.cancel()
+              hideAndClearPromiseQueue(reactContext, fade, forced)
+            }
+          }, remaining)
+
+          return@runOnUiThread
+        }
       }
 
       mStatus = Status.HIDING
@@ -164,8 +188,11 @@ object RNBootSplashModuleImpl {
       }
 
       if (fade) {
-        // Create a new Dialog instance with fade out animation
-        mFadeOutDialog = RNBootSplashDialog(activity, mThemeResId, true)
+        // Create a new Dialog instance with fade out animation. Snapshot the initial
+        // dialog's current (settled last) animation frame so the fade-out dialog shows
+        // it statically instead of restarting the animation from the first frame.
+        val lastFrame = mInitialDialog?.captureCurrentFrame()
+        mFadeOutDialog = RNBootSplashDialog(activity, mThemeResId, true, lastFrame)
         mFadeOutDialog?.show(hideSequence)
       } else {
         mInitialDialog?.dismiss(hideSequence) ?: hideSequence()
@@ -231,9 +258,9 @@ object RNBootSplashModuleImpl {
     return constants
   }
 
-  fun hide(reactContext: ReactApplicationContext, fade: Boolean, promise: Promise) {
+  fun hide(reactContext: ReactApplicationContext, fade: Boolean, forced: Boolean, promise: Promise) {
     mPromiseQueue.push(promise)
-    hideAndClearPromiseQueue(reactContext, fade)
+    hideAndClearPromiseQueue(reactContext, fade, forced)
   }
 
   fun show(reactContext: ReactApplicationContext, fade: Boolean, promise: Promise) {
