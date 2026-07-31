@@ -46,6 +46,22 @@ static const NSTimeInterval kRNBootSplashAnimationGrace = 1.0;
 - (NSTimeInterval)remainingAnimationTime;
 @end
 
+// AVPlayer activates the app's audio session when playback starts, and iOS's
+// default category does not mix, so a silent splash would still stop whatever the
+// user was already listening to. The ambient category mixes with everything, which
+// leaves music and other players alone. Only the untouched default is replaced: if
+// anything in the app has already configured the session deliberately, that choice
+// is left as-is.
+static void RNBootSplashAllowMixedAudio(void) {
+  AVAudioSession *session = [AVAudioSession sharedInstance];
+
+  if (![session.category isEqualToString:AVAudioSessionCategorySoloAmbient]) {
+    return;
+  }
+
+  [session setCategory:AVAudioSessionCategoryAmbient error:nil];
+}
+
 @implementation RNBootSplashAnimationView {
   AVPlayer *_player;
   AVPlayerItem *_playerItem;
@@ -63,6 +79,8 @@ static const NSTimeInterval kRNBootSplashAnimationGrace = 1.0;
     // never reaches a window the remaining time must still run down, otherwise hide
     // would be deferred forever. Re-anchored on the first playback attempt.
     _startTime = CACurrentMediaTime();
+
+    RNBootSplashAllowMixedAudio();
 
     _playerItem = [AVPlayerItem playerItemWithURL:url];
     _player = [AVPlayer playerWithPlayerItem:_playerItem];
