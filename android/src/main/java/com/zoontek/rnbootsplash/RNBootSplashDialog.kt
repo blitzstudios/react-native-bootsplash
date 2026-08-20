@@ -11,6 +11,8 @@ import android.graphics.drawable.AnimatedImageDrawable
 import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.view.ViewGroup
 import android.view.WindowManager
@@ -33,6 +35,17 @@ class RNBootSplashDialog(
   // so the module can snapshot its current (last) frame before building the
   // fade-out dialog.
   private var animatedImageView: ImageView? = null
+
+  // The running animation, retained so it can be stopped from any point in the
+  // dialog's lifecycle. While an AnimatedImageDrawable is running the render thread
+  // owns advancing its frames, so it must be stopped before its window goes away
+  // or before it is drawn from the UI thread.
+  private var animatedDrawable: AnimatedImageDrawable? = null
+
+  // Posted to the main looper rather than to the ImageView so it still runs if the
+  // view is detached before the animation reaches the end of its playthrough.
+  private val mainHandler = Handler(Looper.getMainLooper())
+  private var stopAnimationRunnable: Runnable? = null
 
   // Set when an app-provided animation (theme attr `bootSplashAnimation`) starts
   // playing; both stay 0 when no animation is configured, so the dialog keeps the
@@ -57,11 +70,17 @@ class RNBootSplashDialog(
     return (animationDurationMs - elapsed).coerceAtLeast(0L)
   }
 
-  // Snapshots the currently displayed animation frame (the settled last frame by the
-  // time hide runs) so the fade-out dialog can render it statically instead of
-  // replaying the animation. Returns null when there is no animation or the view has
-  // not been laid out yet.
+  // Freezes the animation and snapshots the frame it settled on, so the fade-out
+  // dialog can render that frame statically instead of replaying the animation.
+  // Returns null when there is no animation or the view has not been laid out yet.
+  //
+  // Must be called on the UI thread. Freezing before the snapshot is a correctness
+  // requirement, not just a way to pick the frame: a running AnimatedImageDrawable is
+  // advanced by the render thread, and drawing it into a software canvas here would
+  // touch the same native image from two threads at once.
   fun captureCurrentFrame(): Bitmap? {
+    stopAnimation()
+
     val view = animatedImageView ?: return null
 
     if (view.width <= 0 || view.height <= 0) {
@@ -73,6 +92,20 @@ class RNBootSplashDialog(
       view.draw(Canvas(bitmap))
       bitmap
     }.getOrNull()
+  }
+
+  // Freezes the animation on whatever frame is currently displayed, which also hands
+  // ownership of the drawable back from the render thread. Idempotent, and a no-op
+  // when no animation is configured. Must be called on the UI thread.
+  private fun stopAnimation() {
+    stopAnimationRunnable?.let {
+      mainHandler.removeCallbacks(it)
+      stopAnimationRunnable = null
+    }
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+      animatedDrawable?.stop()
+    }
   }
 
   @Deprecated("Deprecated in favor of OnBackPressedCallback")
@@ -135,6 +168,14 @@ class RNBootSplashDialog(
     // Only override the stock themed window background when the app opts into an
     // animated splash via the `bootSplashAnimation` theme attribute.
     buildAnimatedSplashView()?.let { setContentView(it) }
+  }
+
+  // Covers every route the window can go away by — an explicit dismiss, the host
+  // activity being destroyed, or the system tearing the dialog down — so a running
+  // animation is never left registered against a destroyed window.
+  override fun onStop() {
+    stopAnimation()
+    super.onStop()
   }
 
   // Builds a full-screen view that plays the app-provided `bootSplashAnimation`
@@ -207,13 +248,16 @@ class RNBootSplashDialog(
           // ourselves at the end of the first pass — stop() retains whatever frame is on
           // screen, which freezes it on the settled last frame. The asset holds its final
           // frame long enough to absorb any cold-start scheduling jitter on this callback.
+          animatedDrawable = drawable
           drawable.repeatCount = AnimatedImageDrawable.REPEAT_INFINITE
           drawable.start()
           animationDurationMs = durationMs
           animationStartUptimeMs = SystemClock.uptimeMillis()
 
           if (durationMs > 0) {
-            imageView.postDelayed({ drawable.stop() }, durationMs)
+            val stopRunnable = Runnable { stopAnimation() }
+            stopAnimationRunnable = stopRunnable
+            mainHandler.postDelayed(stopRunnable, durationMs)
           }
         }
       }
