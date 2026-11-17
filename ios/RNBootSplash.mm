@@ -26,7 +26,7 @@ static NSString *_storyboardName = nil;
 
 // Full-screen view that plays an app-provided video (declared via the
 // `RNBootSplashAnimation` Info.plist key) over the boot splash background and then
-// holds its last frame. This mirrors the Android RNBootSplashDialog animation path
+// holds its last frame. This mirrors the Android RNBootSplashOverlay animation path
 // so both platforms are configured declaratively (a manifest entry + a bundled
 // asset) and driven entirely by the library — the app ships no playback code.
 //

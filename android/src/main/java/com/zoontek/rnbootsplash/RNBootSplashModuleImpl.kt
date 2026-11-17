@@ -4,11 +4,10 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.res.Configuration
 import android.os.Build
-import android.os.SystemClock
+import android.os.Handler
+import android.os.Looper
 import android.util.TypedValue
-import android.view.View
 import android.view.ViewConfiguration
-import android.view.ViewTreeObserver.OnPreDrawListener
 
 import androidx.annotation.StyleRes
 
@@ -19,16 +18,12 @@ import com.facebook.react.bridge.UiThreadUtil
 import com.facebook.react.common.ReactConstants
 import com.facebook.react.uimanager.PixelUtil
 
-import java.util.Timer
-import java.util.TimerTask
-
 object RNBootSplashModuleImpl {
   const val NAME = "RNBootSplash"
 
   private enum class Status {
     HIDDEN,
     HIDING,
-    INITIALIZING,
     VISIBLE,
   }
 
@@ -38,8 +33,8 @@ object RNBootSplashModuleImpl {
   @StyleRes
   private var mThemeResId = -1
 
-  private var mInitialDialog: RNBootSplashDialog? = null
-  private var mFadeOutDialog: RNBootSplashDialog? = null
+  private val mMainHandler = Handler(Looper.getMainLooper())
+  private var mOverlay: RNBootSplashOverlay? = null
 
   internal fun init(activity: Activity?, @StyleRes themeResId: Int) {
     if (mThemeResId != -1) {
@@ -70,26 +65,6 @@ object RNBootSplashModuleImpl {
       }
     }
 
-    // Keep the splash screen on-screen until Dialog is shown
-    val contentView = activity.findViewById<View>(android.R.id.content)
-    mStatus = Status.INITIALIZING
-
-    contentView
-      .viewTreeObserver
-      .addOnPreDrawListener(object : OnPreDrawListener {
-        override fun onPreDraw(): Boolean {
-          if (mStatus == Status.INITIALIZING) {
-            return false
-          }
-
-          contentView
-            .viewTreeObserver
-            .removeOnPreDrawListener(this)
-
-          return true
-        }
-      })
-
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
       // This is not called on Android 12 when activity is started using intent
       // (Android studio / CLI / notification / widget…)
@@ -104,11 +79,10 @@ object RNBootSplashModuleImpl {
         }
     }
 
-    mInitialDialog = RNBootSplashDialog(activity, mThemeResId, false)
-
-    UiThreadUtil.runOnUiThread {
-      mInitialDialog?.show { mStatus = Status.VISIBLE }
-    }
+    // Attached synchronously (init runs in Activity.onCreate, on the UI thread) so
+    // the overlay is part of the activity's very first frame.
+    mOverlay = RNBootSplashOverlay(activity, mThemeResId).also { it.attach() }
+    mStatus = Status.VISIBLE
   }
 
   private fun clearPromiseQueue() {
@@ -117,85 +91,40 @@ object RNBootSplashModuleImpl {
     }
   }
 
-  private fun hideAndClearPromiseQueue(
-    reactContext: ReactApplicationContext,
-    fade: Boolean,
-    forced: Boolean
-  ) {
+  private fun hideAndClearPromiseQueue(fade: Boolean, forced: Boolean) {
     UiThreadUtil.runOnUiThread {
-      val activity = reactContext.currentActivity
-
-      if (mStatus == Status.INITIALIZING
-        || activity == null
-        || activity.isFinishing
-        || activity.isDestroyed
-      ) {
-        val timer = Timer()
-
-        timer.schedule(object : TimerTask() {
-          override fun run() {
-            timer.cancel()
-            hideAndClearPromiseQueue(reactContext, fade, forced)
-          }
-        }, 100)
-
-        return@runOnUiThread
-      }
-
       if (mStatus == Status.HIDING) {
         return@runOnUiThread // wait until fade out end for clearPromiseQueue
       }
 
-      if (mStatus == Status.HIDDEN) {
+      val overlay = mOverlay
+
+      if (mStatus == Status.HIDDEN || overlay == null) {
         clearPromiseQueue()
-        return@runOnUiThread // both initial and fade out dialog are hidden
+        return@runOnUiThread
       }
 
       // Native-owned timing: unless forced, keep the splash visible until its
       // WebP animation has finished playing, then dismiss.
       if (!forced) {
-        val remaining = mInitialDialog?.remainingAnimationTimeMs() ?: 0L
+        val remaining = overlay.remainingAnimationTimeMs()
 
         if (remaining > 0) {
-          val timer = Timer()
-
-          timer.schedule(object : TimerTask() {
-            override fun run() {
-              timer.cancel()
-              hideAndClearPromiseQueue(reactContext, fade, forced)
-            }
-          }, remaining)
-
+          mMainHandler.postDelayed({ hideAndClearPromiseQueue(fade, forced) }, remaining)
           return@runOnUiThread
         }
       }
 
       mStatus = Status.HIDING
 
-      val hideSequence = {
-        val fadeOutDialogDismiss = {
-          mFadeOutDialog = null
+      overlay.dismiss(fade) {
+        // show() may have put up a new overlay while this one was fading out.
+        if (mOverlay === overlay) {
+          mOverlay = null
           mStatus = Status.HIDDEN
-          clearPromiseQueue()
         }
 
-        val initialDialogDismiss = {
-          mInitialDialog = null
-          mFadeOutDialog?.dismiss(fadeOutDialogDismiss) ?: fadeOutDialogDismiss()
-        }
-
-        mInitialDialog?.dismiss(initialDialogDismiss) ?: initialDialogDismiss()
-      }
-
-      if (fade) {
-        // Create a new Dialog instance with fade out animation. Snapshot the initial
-        // dialog's current (settled last) animation frame so the fade-out dialog shows
-        // it statically instead of restarting the animation from the first frame.
-        val lastFrame = mInitialDialog?.captureCurrentFrame()
-        mFadeOutDialog = RNBootSplashDialog(activity, mThemeResId, true, lastFrame)
-        mFadeOutDialog?.show(hideSequence)
-      } else {
-        mInitialDialog?.dismiss(hideSequence) ?: hideSequence()
+        clearPromiseQueue()
       }
     }
   }
@@ -214,14 +143,11 @@ object RNBootSplashModuleImpl {
     mThemeResId = -1
     clearPromiseQueue()
 
-    mInitialDialog?.apply {
-      dismiss()
-      mInitialDialog = null
-    }
+    val overlay = mOverlay
+    mOverlay = null
 
-    mFadeOutDialog?.apply {
-      dismiss()
-      mFadeOutDialog = null
+    if (overlay != null) {
+      UiThreadUtil.runOnUiThread { overlay.dismiss(false) {} }
     }
   }
 
@@ -260,7 +186,7 @@ object RNBootSplashModuleImpl {
 
   fun hide(reactContext: ReactApplicationContext, fade: Boolean, forced: Boolean, promise: Promise) {
     mPromiseQueue.push(promise)
-    hideAndClearPromiseQueue(reactContext, fade, forced)
+    hideAndClearPromiseQueue(fade, forced)
   }
 
   fun show(reactContext: ReactApplicationContext, fade: Boolean, promise: Promise) {
@@ -276,16 +202,14 @@ object RNBootSplashModuleImpl {
         return@runOnUiThread
       }
 
-      if (mStatus == Status.VISIBLE || mStatus == Status.INITIALIZING) {
+      if (mStatus == Status.VISIBLE) {
         promise.resolve(true) // Already visible
         return@runOnUiThread
       }
 
-      mInitialDialog = RNBootSplashDialog(activity, mThemeResId, false)
-      mInitialDialog?.show {
-        mStatus = Status.VISIBLE
-        promise.resolve(true)
-      }
+      mOverlay = RNBootSplashOverlay(activity, mThemeResId).also { it.attach() }
+      mStatus = Status.VISIBLE
+      promise.resolve(true)
     }
   }
 
